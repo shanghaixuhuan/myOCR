@@ -1,0 +1,107 @@
+import sys
+from aip import AipOcr
+from PyQt5.QtWidgets import (QDialog,QApplication,QLabel,QPushButton,
+                             QFileDialog,QComboBox,QTextBrowser,QHBoxLayout,
+                             QVBoxLayout)
+from PyQt5.QtGui import QIcon,QFont
+import qdarkstyle
+from PyQt5 import QtGui
+
+APP_ID = '14868017'
+API_KEY = '6epPHS8EPX1k8GjdCzez7OLT'
+SECRET_KEY = 'onZaVAlgYzEBchooR91xQf8j7kgoFG4W'
+aipOcr = AipOcr(APP_ID, API_KEY, SECRET_KEY)
+options = {
+            'detect_direction': 'true',
+            'language_type': 'CHN_ENG',
+        }
+
+class RecognizeDialog(QDialog):
+    def __init__(self):
+        super(RecognizeDialog,self).__init__()
+        self.text = ""
+        self.initUI()
+
+    def initUI(self):
+        self.resize(700,600)
+        self.setWindowTitle("myOCR——识别界面")
+        self.setWindowIcon(QIcon("./images/Icon.png"))
+
+        self.plabel = QLabel(self)
+        self.plabel.setFixedSize(400,300)
+
+        self.obtn = QPushButton(self)
+        self.obtn.setText("打开本地图片")
+        self.obtn.setFont(QFont("苏新诗柳楷繁", 15))
+        self.obtn.clicked.connect(self.openimage)
+        self.obtn.setFixedSize(180,40)
+        self.condisionComboBox = QComboBox(self)
+        searchCondision = ['通用文字识别', '身份证识别', '银行卡识别', '行驶证识别', '驾驶证识别','车牌识别','营业执照识别']
+        self.condisionComboBox.addItems(searchCondision)
+        self.condisionComboBox.setFont(QFont("苏新诗柳楷繁", 15))
+        self.condisionComboBox.setFixedSize(180,40)
+        self.sbtn = QPushButton(self)
+        self.sbtn.setText("开 始 识 别")
+        self.sbtn.setFont(QFont("苏新诗柳楷繁", 15))
+        self.sbtn.clicked.connect(self.recognize)
+        self.sbtn.setFixedSize(180,40)
+
+        self.v1box = QVBoxLayout()
+        self.v1box.addWidget(self.obtn)
+        self.v1box.addWidget(self.condisionComboBox)
+        self.v1box.addWidget(self.sbtn)
+
+        self.h1box = QHBoxLayout()
+        self.h1box.addWidget(self.plabel)
+        self.h1box.addLayout(self.v1box)
+
+        self.tlabel = QLabel(self)
+        self.tlabel.setText("识\n别\n结\n果")
+        self.tlabel.setFont(QFont("苏新诗柳楷繁", 15))
+        self.tlabel.resize(200, 50)
+
+        self.tbrowser = QTextBrowser(self)
+        self.tbrowser.setFont(QFont("宋体",10))
+        self.tbrowser.setFixedSize(600,350)
+
+        self.h2box = QHBoxLayout()
+        self.h2box.addStretch(1)
+        self.h2box.addWidget(self.tlabel)
+        self.h2box.addStretch(1)
+        self.h2box.addWidget(self.tbrowser)
+        self.h2box.addStretch(1)
+
+        self.vbox = QVBoxLayout()
+        self.vbox.addLayout(self.h1box)
+        self.vbox.addStretch(1)
+        self.vbox.addLayout(self.h2box)
+        self.setLayout(self.vbox)
+
+
+    def openimage(self):
+        self.filePath, imgType = QFileDialog.getOpenFileName(self, "打开本地图片", "", "*.jpg;;*.png;;All Files(*)")
+        self.jpg = QtGui.QPixmap(self.filePath).scaled(self.plabel.width(), self.plabel.height())
+        self.plabel.setPixmap(self.jpg)
+
+    def recognize(self):
+        choice = self.condisionComboBox.currentText()
+        if(choice == "通用文字识别"):
+            result = aipOcr.basicAccurate(self.get_file_content(self.filePath), options)
+            words_result = result['words_result']
+            for i in range(len(words_result)):
+                self.text = self.text + words_result[i]['words']
+            self.tbrowser.append(self.text)
+        elif(choice == "身份证识别"):
+            result = aipOcr.idcard(self.get_file_content(self.filePath),'front')
+            print(result)
+
+    def get_file_content(self,filePath):
+        with open(filePath, 'rb') as fp:
+            return fp.read()
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    aboutWindow = RecognizeDialog()
+    aboutWindow.show()
+    sys.exit(app.exec_())
